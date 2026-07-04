@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Planner Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --card-bg: rgba(22, 24, 35, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #6366f1;
+            --accent-glow: rgba(139, 92, 246, 0.2);
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(139, 92, 246, 0.06) 0px, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 30%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        input, select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.8rem 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        select option {
+            background-color: #1e1b4b;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            border: none;
+            border-radius: 14px;
+            padding: 1rem 2rem;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.15);
+            gap: 0.5rem;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Result Section */
+        .result-section {
+            display: none;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            border-left: 4px solid var(--accent-primary);
+            padding-left: 0.75rem;
+        }
+
+        .student-msg {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            color: var(--text-primary);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .student-msg p {
+            margin-bottom: 1rem;
+        }
+
+        .student-msg ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .session-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .session-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: transform 0.2s ease;
+        }
+
+        .session-card:hover {
+            transform: scale(1.02);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .session-subject {
+            font-weight: 600;
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
+
+        .session-day {
+            background: rgba(139, 92, 246, 0.15);
+            color: #c084fc;
+            padding: 0.25rem 0.6rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .session-time {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .session-focus {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            margin-top: 0.25rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 0.5rem;
+        }
+
+        .session-focus li {
+            margin-left: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .milestones-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .milestones-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #c084fc;
+        }
+
+        .milestone-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .milestone-bullet {
+            color: var(--success);
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .error-banner {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Study Planner Agent</h1>
+            <p>Generate a customized, structured study plan tailored to your exam schedule</p>
+        </header>
+
+        <div class="card">
+            <div class="error-banner" id="errorBanner"></div>
+            
+            <div class="grid">
+                <div class="form-group">
+                    <label for="subjects">Subjects</label>
+                    <input type="text" id="subjects" placeholder="e.g., Chemistry, Calculus" value="Chemistry, Calculus">
+                </div>
+
+                <div class="form-group">
+                    <label for="examDates">Exam Dates</label>
+                    <input type="text" id="examDates" placeholder="e.g., Chemistry on July 10, Calculus on July 15" value="Chemistry on July 10, Calculus on July 15">
+                </div>
+
+                <div class="form-group">
+                    <label for="hoursPerDay">Available Hours per Day</label>
+                    <input type="number" id="hoursPerDay" placeholder="e.g., 2" value="3" min="1" max="24">
+                </div>
+
+                <div class="form-group">
+                    <label for="difficulty">Difficulty Level</label>
+                    <select id="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard" selected>Hard</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn" id="generateBtn" onclick="generatePlan()">
+                <span class="spinner" id="spinner"></span>
+                <span id="btnText">Generate Plan</span>
+            </button>
+        </div>
+
+        <div class="card result-section" id="resultCard">
+            <div class="result-title" id="resultTitle">Generated Study Schedule</div>
+            <div class="student-msg" id="studentMsg"></div>
+            
+            <div class="result-title">Weekly Sessions Outline</div>
+            <div class="session-card-grid" id="sessionGrid"></div>
+
+            <div class="milestones-card">
+                <div class="milestones-title">Key Milestones</div>
+                <div id="milestonesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate a random session ID for each page reload to ensure fresh context
+        // Clear stale Angular/ADK developer UI storage to prevent session conflicts
+        try {
+            const savedSessionId = localStorage.getItem("study_planner_session_id");
+            localStorage.clear();
+            sessionStorage.clear();
+            if (savedSessionId) {
+                localStorage.setItem("study_planner_session_id", savedSessionId);
+            }
+        } catch (e) {
+            console.error("Failed to clear storage:", e);
+        }
+
+        // Retrieve or generate session ID
+        let sessionId = localStorage.getItem("study_planner_session_id");
+        if (!sessionId) {
+            sessionId = "session-" + Math.random().toString(36).substring(2, 11);
+            localStorage.setItem("study_planner_session_id", sessionId);
+        }
+
+        // A basic markdown parser to clean up response messages in the UI
+        function parseMarkdown(text) {
+            if (!text) return "";
+            return text
+                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                .replace(/\n\n/g, "</p><p>")
+                .replace(/\n\* (.*?)/g, "<li>$1</li>")
+                .replace(/<\/li><p>/g, "</li><ul>")
+                .replace(/<\/p>/g, "</p>")
+                .replace(/^(.*?)$/m, "<p>$1</p>");
+        }
+
+        async function generatePlan() {
+            const generateBtn = document.getElementById("generateBtn");
+            const spinner = document.getElementById("spinner");
+            const btnText = document.getElementById("btnText");
+            const errorBanner = document.getElementById("errorBanner");
+            const resultCard = document.getElementById("resultCard");
+
+            const subjects = document.getElementById("subjects").value.trim();
+            const examDates = document.getElementById("examDates").value.trim();
+            const hoursPerDay = document.getElementById("hoursPerDay").value.trim();
+            const difficulty = document.getElementById("difficulty").value;
+
+            if (!subjects || !examDates || !hoursPerDay) {
+                errorBanner.innerText = "Please fill in all the input fields.";
+                errorBanner.style.display = "block";
+                return;
+            }
+
+            // Construct study planning prompt
+            const prompt = `I want to set up a study schedule. Subjects: ${subjects}. Exam dates: ${examDates}. Available study hours per day: ${hoursPerDay} hours. Difficulty level: ${difficulty}.`;
+
+            errorBanner.style.display = "none";
+            resultCard.style.display = "none";
+            generateBtn.disabled = true;
+            spinner.style.display = "block";
+            btnText.innerText = "Generating Plan...";
+
+            try {
+                let response = await fetch("/run", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        user_id: "web-student",
+                        session_id: sessionId,
+                        new_message: {
+                            role: "user",
+                            parts: [{ text: prompt }]
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    // Stale session or other failure. Attempt recovery by regenerating session ID.
+                    localStorage.removeItem("study_planner_session_id");
+                    sessionId = "session-" + Math.random().toString(36).substring(2, 11);
+                    localStorage.setItem("study_planner_session_id", sessionId);
+
+                    response = await fetch("/run", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            user_id: "web-student",
+                            session_id: sessionId,
+                            new_message: {
+                                role: "user",
+                                parts: [{ text: prompt }]
+                            }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const text = await response.text();
+                        let errorMsg = text;
+                        try {
+                            const parsed = JSON.parse(text);
+                            if (parsed.detail) {
+                                errorMsg = parsed.detail;
+                            }
+                        } catch (e) {}
+                        throw new Error(errorMsg || "Failed to generate plan after session reset");
+                    }
+                }
+
+                const events = await response.json();
+                
+                // Find model response matching the structured schema from coordinator
+                let coordinatorOutput = null;
+
+                for (const event of events) {
+                    if (event.author === "StudyPlannerCoordinator" && event.content && event.content.role === "model") {
+                        const textContent = event.content.parts.map(p => p.text).join("");
+                        try {
+                            coordinatorOutput = JSON.parse(textContent);
+                        } catch (e) {
+                            // Fallback to reading parsed state if available or retry
+                        }
+                    }
+                }
+
+                if (!coordinatorOutput) {
+                    throw new Error("No structured output returned from the Coordinator. Check if you exceeded Gemini rate limits.");
+                }
+
+                // Render result
+                document.getElementById("studentMsg").innerHTML = parseMarkdown(coordinatorOutput.student_message);
+                
+                const plannerData = coordinatorOutput.planner_data;
+                if (plannerData) {
+                    document.getElementById("resultTitle").innerText = plannerData.schedule_title || "Generated Study Schedule";
+                    
+                    // Render sessions
+                    const sessionGrid = document.getElementById("sessionGrid");
+                    sessionGrid.innerHTML = "";
+                    if (plannerData.sessions && plannerData.sessions.length > 0) {
+                        plannerData.sessions.forEach(session => {
+                            const card = document.createElement("div");
+                            card.className = "session-card";
+                            
+                            const focusLi = session.focus_areas ? session.focus_areas.map(f => `<li>${f}</li>`).join("") : "";
+                            
+                            card.innerHTML = `
+                                <div class="session-header">
+                                    <span class="session-subject">${session.subject}</span>
+                                    <span class="session-day">${session.day_of_week}</span>
+                                </div>
+                                <div class="session-time">⏰ ${session.time_slot}</div>
+                                <ul class="session-focus">${focusLi}</ul>
+                            `;
+                            sessionGrid.appendChild(card);
+                        });
+                    } else {
+                        sessionGrid.innerHTML = "<p>No study sessions generated.</p>";
+                    }
+
+                    // Render milestones
+                    const milestonesList = document.getElementById("milestonesList");
+                    milestonesList.innerHTML = "";
+                    if (plannerData.key_milestones && plannerData.key_milestones.length > 0) {
+                        plannerData.key_milestones.forEach(m => {
+                            const div = document.createElement("div");
+                            div.className = "milestone-item";
+                            div.innerHTML = `<span class="milestone-bullet">✓</span><span>${m}</span>`;
+                            milestonesList.appendChild(div);
+                        });
+                    } else {
+                        milestonesList.innerHTML = "<p>No key milestones defined.</p>";
+                    }
+                }
+
+                resultCard.style.display = "block";
+            } catch (err) {
+                console.error(err);
+                errorBanner.innerText = `Error: ${err.message}`;
+                errorBanner.style.display = "block";
+            } finally {
+                generateBtn.disabled = false;
+                spinner.style.display = "none";
+                btnText.innerText = "Generate Plan";
+            }
+        }
+    </script>
+</body>
+</html>
